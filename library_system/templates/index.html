@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Library System</title>
+</head>
+<body>
+    <h1>Welcome, {{ user }}! <a href="/logout">Logout</a></h1>
+
+    <h2>Add a Book</h2>
+    <form action="/add_book" method="post">
+        <input type="text" name="title" placeholder="Book Title" required>
+        <input type="text" name="author" placeholder="Author" required>
+        <button type="submit">Add Book</button>
+    </form>
+
+    <h2>Available Books</h2>
+    <ul>
+        {% for book in books %}
+            <li>{{ book.title }} by {{ book.author }}  <!-- ✅ Fixed title & author display -->
+                {% if book.available == 1 %}
+                    <form action="/reserve/{{ book.id }}" method="post" style="display:inline;">
+                        <button type="submit">Reserve</button>
+                    </form>
+                {% else %}
+                    <span style="color:red;">(Reserved by {{ book.reserved_by if book.reserved_by.strip() else "Unknown" }})</span>
+                    {% if book.reserved_by == user %}
+                        <form action="/return_book" method="post" style="display:inline;">
+                            <input type="hidden" name="book_id" value="{{ book.id }}">
+                            <button type="submit">Return</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
