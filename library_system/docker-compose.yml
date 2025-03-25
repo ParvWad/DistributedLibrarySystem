@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"  # RabbitMQ UI
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"  # RabbitMQ UI
 
   auth_service:
     build:
@@ -13,8 +13,8 @@ services:
       dockerfile: Services/auth_service/Dockerfile
     ports:
       - "50051:50051"
-    depends_on:
-      - rabbitmq
+    # depends_on:
+    #   - rabbitmq
     volumes:
       - ./library.db:/app/library.db
 
@@ -24,8 +24,8 @@ services:
       dockerfile: Services/book_service/Dockerfile
     ports:
       - "50052:50052"
-    depends_on:
-      - rabbitmq
+    # depends_on:
+    #   - rabbitmq
     volumes:
       - ./library.db:/app/library.db
 
@@ -38,7 +38,7 @@ services:
     depends_on:
       - auth_service
       - book_service
-      - rabbitmq
+      # - rabbitmq
 
   book_consumer:
     build:
@@ -46,7 +46,7 @@ services:
       dockerfile: Services/book_consumer.Dockerfile
     command: python Services/book_consumer.py
     depends_on:
-      - rabbitmq
+      # - rabbitmq
       - book_service
 
   book_add_consumer:
@@ -55,5 +55,5 @@ services:
       dockerfile: Services/book_add_consumer.Dockerfile
     command: python Services/book_add_consumer.py
     depends_on:
-      - rabbitmq
+      # - rabbitmq
       - book_service

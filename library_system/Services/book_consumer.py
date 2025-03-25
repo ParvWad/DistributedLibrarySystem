@@ -10,12 +10,12 @@ def callback(ch, method, properties, body):
     book_id, username = message.split(":")
     print(f" Received reservation task - Book ID: {book_id}, Username: {username}")
 
-    with grpc.insecure_channel("localhost:50052") as channel:
+    with grpc.insecure_channel("book_service:50052") as channel:
         stub = library_pb2_grpc.BookServiceStub(channel)
         response = stub.ReserveBook(library_pb2.ReserveRequest(book_id=int(book_id), username=username))
         print(f" Book reservation status: {response.message}")
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
+connection = pika.BlockingConnection(pika.ConnectionParameters('host.docker.internal'))
 channel = connection.channel()
 channel.queue_declare(queue='book_reservations')
 

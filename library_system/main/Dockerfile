@@ -11,6 +11,9 @@ RUN pip install -r /app/requirements.txt
 # Copy the rest of the application code
 COPY main /app/main
 COPY grpc_proto /app/grpc_proto
+COPY ./Services /app/Services
+COPY ./templates /app/templates
+
 
 EXPOSE 8000
 

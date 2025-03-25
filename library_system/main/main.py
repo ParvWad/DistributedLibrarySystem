@@ -18,7 +18,7 @@ def home(request: Request):
 
 @app.post("/register")
 def register_user(request: Request, username: str = Form(...), password: str = Form(...)):
-    with grpc.insecure_channel("localhost:50051") as channel:
+    with grpc.insecure_channel("auth_service:50051") as channel:
         stub = auth_pb2_grpc.AuthServiceStub(channel)
         response = stub.RegisterUser(auth_pb2.AuthRequest(username=username, password=password))
 
@@ -31,7 +31,7 @@ def register_user(request: Request, username: str = Form(...), password: str = F
 
 @app.post("/login")
 def login_user(request: Request, username: str = Form(...), password: str = Form(...)):
-    with grpc.insecure_channel("localhost:50051") as channel:
+    with grpc.insecure_channel("auth_service:50051") as channel:
         stub = auth_pb2_grpc.AuthServiceStub(channel)
         response = stub.LoginUser(auth_pb2.AuthRequest(username=username, password=password))
 
@@ -46,7 +46,7 @@ def books_page(request: Request):
     if not user:
         return RedirectResponse(url="/register")
 
-    with grpc.insecure_channel("localhost:50052") as channel:
+    with grpc.insecure_channel("book_service:50052") as channel:
         stub = library_pb2_grpc.BookServiceStub(channel)
         response = stub.GetBooks(library_pb2.Empty())
 
@@ -86,7 +86,7 @@ def return_book(request: Request, book_id: str = Form(...)):
     if not user:
         return RedirectResponse(url="/register")
 
-    with grpc.insecure_channel("localhost:50052") as channel:
+    with grpc.insecure_channel("book_service:50052") as channel:
         stub = library_pb2_grpc.BookServiceStub(channel)
         response = stub.ReturnBook(library_pb2.ReturnRequest(book_id=int(book_id), username=user))
 
@@ -97,7 +97,7 @@ def logout_user(request: Request):
     return RedirectResponse(url="/", status_code=302)
 
 def publish_reservation(book_id, username):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters('host.docker.internal'))
     channel = connection.channel()
     channel.queue_declare(queue='book_reservations')
 
@@ -106,7 +106,7 @@ def publish_reservation(book_id, username):
     connection.close()
 
 def publish_add_book(title, author):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters('host.docker.internal'))
     channel = connection.channel()
     channel.queue_declare(queue='book_additions')
     message = f"{title}:{author}"
