@@ -14,7 +14,7 @@ cursor = conn.cursor()
 cursor.execute("PRAGMA journal_mode=WAL;")
 cursor.execute("PRAGMA synchronous=NORMAL;")
 
-# Create Users Table
+
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +45,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthService(), server)
     server.add_insecure_port("[::]:50051")
-    print("✅ Auth Service is running on port 50051...")  # ✅ Add this
+    print("running on port 50051...")
     server.start()
     server.wait_for_termination()
 

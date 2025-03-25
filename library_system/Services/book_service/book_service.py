@@ -6,6 +6,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from grpc_proto import library_pb2, library_pb2_grpc
+from concurrent.futures import ThreadPoolExecutor
 
 # Database setup
 conn = sqlite3.connect("library.db", check_same_thread=False, isolation_level=None)
@@ -24,6 +25,7 @@ cursor.execute("""
     )
 """)
 conn.commit()
+executor = ThreadPoolExecutor(max_workers=5)
 
 class BookService(library_pb2_grpc.BookServiceServicer):
     def AddBook(self, request, context):
@@ -33,30 +35,33 @@ class BookService(library_pb2_grpc.BookServiceServicer):
         return library_pb2.BookResponse(success=True, message="Book added successfully")
 
     def ReserveBook(self, request, context):
-        print(f"DEBUG: Reserving book {request.book_id} for user {request.username}")  # ✅ Debugging
+        print(f"DEBUG: Reserving book {request.book_id} for user {request.username}")
 
         cursor.execute("SELECT reserved_by FROM books WHERE id=?", (request.book_id,))
         existing = cursor.fetchone()
 
-        if existing and existing[0]:  # ✅ If book is already reserved
+        if existing and existing[0]:
             return library_pb2.BookResponse(success=False, message="Book is already reserved")
 
         cursor.execute("UPDATE books SET available=0, reserved_by=? WHERE id=? AND available=1",
                        (request.username, request.book_id))
         conn.commit()
 
-        print(f"DEBUG: Updated reserved_by field in DB: {request.username}")  # ✅ Debugging
+        print(f"DEBUG: Updated reserved_by field in DB: {request.username}")
         return library_pb2.BookResponse(success=True, message="Book reserved successfully")
+
     def GetBooks(self, request, context):
-        cursor.execute("SELECT id, title, author, available, reserved_by FROM books")  # ✅ Add reserved_by
+            future = executor.submit(self._fetch_books)
+            return future.result()
+
+    def _fetch_books(self):
+        cursor.execute("SELECT id, title, author, available, reserved_by FROM books")
         books = cursor.fetchall()
-
-        print(f"DEBUG: Retrieved books from database: {books}")  # ✅ Debugging
-
         books_list = [library_pb2.Book(id=row[0], title=row[1], author=row[2], available=row[3], reserved_by=row[4] if row[4] else "" ) for row in books]
         return library_pb2.BookList(books=books_list)
+
     def ReturnBook(self, request, context):
-        print(f"DEBUG: Returning book {request.book_id} for user {request.username}")  # ✅ Debugging
+        print(f"DEBUG: Returning book {request.book_id} for user {request.username}")
 
         cursor.execute("SELECT reserved_by FROM books WHERE id=?", (request.book_id,))
         book = cursor.fetchone()

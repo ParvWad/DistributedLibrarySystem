@@ -1,12 +1,12 @@
 import grpc
-
+# uvicorn main.main:app --reload
 
 from grpc_proto import auth_pb2, auth_pb2_grpc, library_pb2, library_pb2_grpc
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
-
+import pika
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="supersecretkey")
 templates = Jinja2Templates(directory="templates")
@@ -63,14 +63,10 @@ def add_book(request: Request, title: str = Form(...), author: str = Form(...)):
     if not user:
         return RedirectResponse(url="/register")
 
-    with grpc.insecure_channel("localhost:50052") as channel:
-        stub = library_pb2_grpc.BookServiceStub(channel)
-        response = stub.AddBook(library_pb2.BookRequest(title=title, author=author))
+    publish_add_book(title, author)
 
-    if response.success:
-        return RedirectResponse(url="/books", status_code=302)
-    else:
-        return {"error": response.message}
+    return RedirectResponse(url="/books", status_code=302)
+
 
 
 @app.post("/reserve/{book_id}")
@@ -79,9 +75,8 @@ def reserve_book(request: Request, book_id: int):
     if not user:
         return RedirectResponse(url="/register")
 
-    with grpc.insecure_channel("localhost:50052") as channel:
-        stub = library_pb2_grpc.BookServiceStub(channel)
-        response = stub.ReserveBook(library_pb2.ReserveRequest(book_id=book_id, username=user))
+    publish_reservation(book_id, user)
+
 
     return RedirectResponse(url="/books", status_code=302)
 
@@ -101,5 +96,21 @@ def logout_user(request: Request):
     request.session.clear()
     return RedirectResponse(url="/", status_code=302)
 
+def publish_reservation(book_id, username):
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+    channel.queue_declare(queue='book_reservations')
+
+    message = f"{book_id}:{username}"
+    channel.basic_publish(exchange='', routing_key='book_reservations', body=message)
+    connection.close()
+
+def publish_add_book(title, author):
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+    channel.queue_declare(queue='book_additions')
+    message = f"{title}:{author}"
+    channel.basic_publish(exchange='', routing_key='book_additions', body=message)
+    connection.close()
 
 __all__ = ["app"]
